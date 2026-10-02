@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0b1220">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Presenter Remote</title>
+<style>
+  :root{
+    --bg:#0b1220; --panel:#131c30; --panel2:#1a2540; --border:#2a3858; --text:#e8eefc; --dim:#8b9bbd;
+    --gold:#ffb02e; --gold-d:#e8780a; --live:#ff3b4e; --ok:#19e08a;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+    font:16px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overscroll-behavior:none;}
+  body{touch-action:manipulation;user-select:none;-webkit-user-select:none;}
+  button,input{font:inherit;color:inherit;}
+  button{border:1px solid var(--border);background:var(--panel2);border-radius:14px;padding:12px;min-height:52px;
+    font-weight:600;cursor:pointer;transition:transform .06s,background .15s;}
+  button:active{transform:scale(.96);background:#243257;}
+  button:disabled{opacity:.4;}
+  .hidden{display:none!important;}
+
+  #app{display:flex;flex-direction:column;height:100%;height:100dvh;
+    padding-top:env(safe-area-inset-top);}
+  header{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--panel);}
+  header h1{font-size:16px;margin:0;flex:1;}
+  .dot{width:10px;height:10px;border-radius:50%;background:#777;flex:none;}
+  .dot.on{background:var(--ok);box-shadow:0 0 8px var(--ok);}
+  .dot.wait{background:var(--gold);animation:blink 1s infinite;}
+  @keyframes blink{50%{opacity:.3;}}
+  header .st{font-size:12px;color:var(--dim);}
+  header button{min-height:36px;padding:4px 10px;font-size:13px;border-radius:10px;}
+
+  main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 14px 16px;}
+  nav{display:flex;border-top:1px solid var(--border);background:var(--panel);padding-bottom:env(safe-area-inset-bottom);}
+  nav button{flex:1;border:0;border-radius:0;background:none;color:var(--dim);min-height:58px;font-size:12px;display:flex;flex-direction:column;gap:2px;align-items:center;justify-content:center;}
+  nav button .ic{font-size:20px;}
+  nav button.act{color:var(--gold);}
+
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:12px 14px;margin-bottom:12px;}
+  .card .lbl{display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:6px;}
+  .card .txt{white-space:pre-wrap;font-size:17px;max-height:26vh;overflow-y:auto;min-height:2.6em;}
+  .card .sub{font-size:12px;color:var(--dim);margin-top:4px;}
+  .card.live{border-color:var(--live);}
+  .card.live .lbl{color:#ff8a96;}
+  .card.live.blank .txt{opacity:.35;font-style:italic;}
+  .tag{margin-left:auto;font-size:10px;padding:2px 8px;border-radius:99px;background:var(--live);color:#fff;letter-spacing:.08em;}
+
+  .golive{width:100%;min-height:72px;font-size:22px;font-weight:800;color:#2a1600;border:1px solid #ffc766;
+    background:linear-gradient(#ffb02e,var(--gold-d));box-shadow:0 0 22px #ff9a1f55;margin-bottom:12px;}
+  .golive:active{background:linear-gradient(#ffc04d,#f08a10);}
+  .grid{display:grid;gap:10px;margin-bottom:12px;}
+  .g2{grid-template-columns:1fr 1fr;} .g4{grid-template-columns:repeat(4,1fr);}
+  .big{min-height:84px;font-size:20px;}
+  .small{min-height:56px;font-size:13px;}
+  .blank-btn{width:100%;min-height:58px;}
+  .blank-btn.on{background:#5a1220;border-color:var(--live);color:#ffd0d6;}
+
+  /* library */
+  .search{width:100%;padding:12px 14px;border-radius:14px;border:1px solid var(--border);background:var(--panel);margin-bottom:10px;user-select:text;-webkit-user-select:text;}
+  .item{display:flex;align-items:center;gap:10px;width:100%;text-align:left;margin-bottom:8px;min-height:56px;}
+  .item .t{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .item .n{font-size:12px;color:var(--dim);font-weight:500;}
+  .item.cur{border-color:var(--gold);}
+  .bar{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .bar button{min-height:44px;padding:6px 14px;}
+  .bar .t{font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .slide{display:flex;gap:10px;align-items:stretch;background:var(--panel);border:1px solid var(--border);border-radius:14px;margin-bottom:10px;overflow:hidden;}
+  .slide.prev{border-color:var(--gold);} .slide.live{border-color:var(--live);}
+  .slide .body{flex:1;padding:10px 12px;min-width:0;cursor:pointer;}
+  .slide .no{font-size:11px;color:var(--dim);display:flex;gap:6px;align-items:center;margin-bottom:3px;}
+  .slide .no b{font-size:10px;padding:1px 7px;border-radius:99px;color:#111;}
+  .slide .no b.p{background:var(--gold);} .slide .no b.l{background:var(--live);color:#fff;}
+  .slide .tx{white-space:pre-wrap;font-size:15px;max-height:7.5em;overflow:hidden;}
+  .slide .go{width:74px;border:0;border-left:1px solid var(--border);border-radius:0;background:#2a1600;color:var(--gold);font-size:13px;}
+  .empty{color:var(--dim);text-align:center;padding:30px 10px;}
+  .ws{display:flex;justify-content:space-between;align-items:center;width:100%;margin-bottom:8px;text-align:left;}
+  .ws.act{border-color:var(--gold);color:var(--gold);}
+
+  /* connect */
+  #connect{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;flex-direction:column;justify-content:center;
+    padding:24px;padding-top:calc(24px + env(safe-area-inset-top));gap:12px;overflow-y:auto;}
+  #connect h2{margin:0;font-size:26px;} #connect p{color:var(--dim);margin:0;font-size:14px;}
+  #connect input{padding:14px;border-radius:14px;border:1px solid var(--border);background:var(--panel);width:100%;user-select:text;-webkit-user-select:text;}
+  #connect .err{color:#ff8a96;font-size:14px;min-height:1.3em;}
+  #connect .go{margin:0;}
+  #toast{position:fixed;left:50%;bottom:calc(80px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#000c;color:#fff;
+    padding:8px 16px;border-radius:99px;font-size:13px;z-index:30;pointer-events:none;}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <span id="dot" class="dot"></span>
+    <h1>Presenter Remote</h1>
+    <span id="st" class="st">offline</span>
+    <button id="discBtn" type="button">Change</button>
+  </header>
+  <main id="main"></main>
+  <nav>
+    <button data-tab="control" class="act"><span class="ic">🎛</span>Control</button>
+    <button data-tab="library"><span class="ic">🎵</span>Library</button>
+    <button data-tab="workspace"><span class="ic">🧩</span>Workspace</button>
+  </nav>
+</div>
+
+<div id="connect" class="hidden">
+  <h2>Connect to Presenter</h2>
+  <p>Open Presenter on the computer, tap <b>📱 Phone</b> and scan the QR code with your phone's camera — or type the details below.</p>
+  <input id="hostIn" placeholder="Computer address, e.g. 192.168.1.20" inputmode="url" autocapitalize="off" autocomplete="off" spellcheck="false">
+  <input id="pinIn" placeholder="Connection PIN" autocapitalize="off" autocomplete="off" spellcheck="false">
+  <div id="cerr" class="err"></div>
+  <button id="connBtn" class="golive go" type="button">Connect</button>
+</div>
+<div id="toast" class="hidden"></div>
+
+<script>
+(function(){
+  'use strict';
+  const $ = (id)=>document.getElementById(id);
+  const LS = (k,v)=>{ try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v); }catch(e){ return null; } };
+
+  // ---------- state ----------
+  const S = { items:[], selectedItemId:null, slides:[], preview:{}, live:{}, workspace:null };
+  let tab = 'control', browsing = null, filter = '';
+  let origin = '', pin = '', es = null, connected = false, retryTimer = null, candidates = [], candIdx = 0, gotAny = false;
+
+  const deviceId = LS('pr_dev') || (()=>{ const v = Math.random().toString(36).slice(2,10); LS('pr_dev', v); return v; })();
+  const deviceName = /iPhone|iPad/.test(navigator.userAgent) ? 'iPhone' : /Android/.test(navigator.userAgent) ? 'Android phone' : 'Phone';
+
+  // ---------- small helpers ----------
+  function h(tag, cls, text){ const e = document.createElement(tag); if(cls) e.className = cls; if(text != null) e.textContent = text; return e; }
+  function buzz(){ try{ navigator.vibrate && navigator.vibrate(12); }catch(e){} }
+  let toastT = null;
+  function toast(msg){ const t = $('toast'); t.textContent = msg; t.classList.remove('hidden'); clearTimeout(toastT); toastT = setTimeout(()=>t.classList.add('hidden'), 1800); }
+  function setStatus(kind, text){ $('dot').className = 'dot ' + kind; $('st').textContent = text; }
+  function normHost(v){
+    v = (v || '').trim(); if(!v) return '';
+    if(!/^https?:\/\//i.test(v)) v = 'http://' + v;
+    try{ const u = new URL(v); if(!u.port) u.port = '8787'; return u.origin; }catch(e){ return ''; }
+  }
+
+  // ---------- sending commands ----------
+  function send(type, extra){
+    if(!origin) return;
+    buzz();
+    const ctl = new AbortController(); const to = setTimeout(()=>ctl.abort(), 4000);
+    fetch(origin + '/api/send', {
+      method:'POST', headers:{'Content-Type':'application/json'}, signal: ctl.signal,
+      body: JSON.stringify(Object.assign({ from:'remote', type:type, pin:pin, device:deviceId, name:deviceName }, extra || {}))
+    }).then(r=>{ if(!r.ok) toast(r.status === 401 || r.status === 403 ? 'Not allowed — check the PIN' : 'Send failed'); })
+      .catch(()=>toast('Could not reach Presenter'))
+      .finally(()=>clearTimeout(to));
+  }
+
+  // ---------- live connection (Server-Sent Events) ----------
+  function closeES(){ if(es){ try{ es.close(); }catch(e){} es = null; } }
+  function startConnect(cands){
+    candidates = cands.filter(Boolean); candIdx = 0; gotAny = false; connected = false;
+    clearTimeout(retryTimer); tryCandidate();
+  }
+  function tryCandidate(){
+    closeES();
+    if(candIdx >= candidates.length){
+      setStatus('', 'offline');
+      if(!gotAny){ showConnect('Could not connect. Check the PIN, that Presenter is open, and that this phone is on the same Wi-Fi.'); }
+      else scheduleRetry();
+      return;
+    }
+    const o = candidates[candIdx];
+    setStatus('wait', 'connecting…');
+    let opened = false;
+    const url = o + '/events?pin=' + encodeURIComponent(pin) + '&device=' + encodeURIComponent(deviceId) + '&name=' + encodeURIComponent(deviceName);
+    let e;
+    try{ e = new EventSource(url); }catch(err){ candIdx++; return tryCandidate(); }
+    es = e;
+    const guard = setTimeout(()=>{ if(!opened && es === e){ candIdx++; tryCandidate(); } }, 4500);
+    e.onopen = ()=>{
+      opened = true; clearTimeout(guard); origin = o; connected = true; gotAny = true;
+      LS('pr_conn', JSON.stringify({ host:o, pin:pin }));
+      hideConnect(); setStatus('on', 'connected'); send('requestState'); keepAwake();
+    };
+    e.onmessage = onMessage;
+    e.onerror = ()=>{
+      clearTimeout(guard);
+      if(!opened){ if(es === e){ candIdx++; tryCandidate(); } return; }       // never got in: try next address
+      connected = false; setStatus('wait', 'reconnecting…');
+      if(e.readyState === EventSource.CLOSED){ closeES(); scheduleRetry(); }    // otherwise the browser retries by itself
+    };
+  }
+  function scheduleRetry(){ clearTimeout(retryTimer); retryTimer = setTimeout(()=>{ if(pin) startConnect([origin].concat(candidates)); }, 2500); }
+  function onMessage(ev){
+    let m; try{ m = JSON.parse(ev.data); }catch(e){ return; }
+    if(!m || m.from !== 'control' || m.type !== 'state') return;
+    S.items = m.items || []; S.selectedItemId = m.selectedItemId || null; S.slides = m.slides || [];
+    S.preview = m.preview || {}; S.live = m.live || {}; S.workspace = m.workspace || null;
+    render();
+  }
+  async function keepAwake(){ try{ if(navigator.wakeLock) await navigator.wakeLock.request('screen'); }catch(e){} }
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.hidden || !pin) return;
+    if(!es || es.readyState === EventSource.CLOSED) startConnect([origin].concat(candidates)); else send('requestState');
+    keepAwake();
+  });
+
+  // ---------- connect screen ----------
+  function showConnect(err){ $('cerr').textContent = err || ''; $('connect').classList.remove('hidden'); $('connBtn').disabled = false; $('connBtn').textContent = 'Connect'; }
+  function hideConnect(){ $('connect').classList.add('hidden'); }
+  $('connBtn').addEventListener('click', ()=>{
+    const host = normHost($('hostIn').value) || (location.protocol.startsWith('http') ? location.origin : '');
+    pin = $('pinIn').value.trim();
+    if(!host){ $('cerr').textContent = 'Enter the computer\'s address.'; return; }
+    if(!pin){ $('cerr').textContent = 'Enter the connection PIN.'; return; }
+    $('cerr').textContent = ''; $('connBtn').disabled = true; $('connBtn').textContent = 'Connecting…';
+    startConnect([host]);
+  });
+  $('discBtn').addEventListener('click', ()=>{ closeES(); clearTimeout(retryTimer); connected = false; setStatus('', 'offline'); showConnect(''); });
+
+  // ---------- rendering ----------
+  document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click', ()=>{ tab = b.dataset.tab; render(); }));
+  function render(){
+    document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('act', b.dataset.tab === tab));
+    const keep = $('main').scrollTop, main = $('main'); main.textContent = '';
+    if(tab === 'control') renderControl(main);
+    else if(tab === 'library') renderLibrary(main);
+    else renderWorkspace(main);
+    if(tab !== 'control') main.scrollTop = keep;
+  }
+
+  function renderControl(main){
+    const live = S.live, prev = S.preview;
+    const lc = h('div', 'card live' + (live.blank ? ' blank' : ''));
+    const ll = h('div', 'lbl', 'Live'); if(live.blank) ll.appendChild(h('span', 'tag', 'BLANK'));
+    lc.appendChild(ll); lc.appendChild(h('div', 'txt', live.blank ? '(screen is blank)' : (live.text || '—')));
+    main.appendChild(lc);
+
+    const pc = h('div', 'card'); pc.appendChild(h('div', 'lbl', 'Preview — next up'));
+    pc.appendChild(h('div', 'txt', prev.text || '—'));
+    if(prev.subtitle) pc.appendChild(h('div', 'sub', prev.subtitle));
+    main.appendChild(pc);
+
+    const go = h('button', 'golive', 'GO LIVE ▸'); go.addEventListener('click', ()=>send('golive')); main.appendChild(go);
+
+    const g1 = h('div', 'grid g2');
+    const pv = h('button', 'big', '◀ Previous'); pv.addEventListener('click', ()=>send('prev'));
+    const nx = h('button', 'big', 'Next ▶');     nx.addEventListener('click', ()=>send('next'));
+    g1.appendChild(pv); g1.appendChild(nx); main.appendChild(g1);
+
+    const g2 = h('div', 'grid g4');
+    [['▲ Line up','lineUp'], ['▼ Line down','lineDown'], ['⏮ Home','home'], ['⏭ End','end']].forEach(([t, c])=>{
+      const b = h('button', 'small', t); b.addEventListener('click', ()=>send(c)); g2.appendChild(b);
+    });
+    main.appendChild(g2);
+
+    const bl = h('button', 'blank-btn' + (live.blank ? ' on' : ''), live.blank ? '🖥 Screen is black — tap to restore' : '🖥 Blank / Black screen');
+    bl.addEventListener('click', ()=>send('blank')); main.appendChild(bl);
+  }
+
+  function renderLibrary(main){
+    if(browsing){ return renderSlides(main); }
+    const q = h('input', 'search'); q.type = 'search'; q.placeholder = 'Search songs and items…'; q.value = filter;
+    q.addEventListener('input', ()=>{ filter = q.value; paint(); });
+    main.appendChild(q);
+    const box = h('div'); main.appendChild(box);
+    function paint(){
+      box.textContent = '';
+      const f = filter.trim().toLowerCase();
+      const list = S.items.filter(i=>!f || (i.title || '').toLowerCase().includes(f));
+      if(!list.length){ box.appendChild(h('div', 'empty', S.items.length ? 'No match.' : 'The library is empty.')); return; }
+      list.forEach(i=>{
+        const b = h('button', 'item' + (i.id === S.selectedItemId ? ' cur' : ''));
+        b.appendChild(h('span', 't', i.title || 'Untitled'));
+        b.appendChild(h('span', 'n', (i.n != null ? i.n + ' slides' : (i.type || ''))));
+        b.addEventListener('click', ()=>{ browsing = i.id; send('browse', { itemId:i.id }); render(); });
+        box.appendChild(b);
+      });
+    }
+    paint();
+  }
+
+  function renderSlides(main){
+    const item = S.items.find(i=>i.id === browsing);
+    const bar = h('div', 'bar');
+    const back = h('button', null, '‹ Library'); back.addEventListener('click', ()=>{ browsing = null; render(); });
+    bar.appendChild(back); bar.appendChild(h('div', 't', item ? item.title : '')); main.appendChild(bar);
+    if(!item){ main.appendChild(h('div', 'empty', 'This item no longer exists.')); return; }
+    if(S.selectedItemId !== browsing){ main.appendChild(h('div', 'empty', 'Loading slides…')); return; }
+    if(!S.slides.length){ main.appendChild(h('div', 'empty', 'No slides.')); return; }
+    S.slides.forEach((sl, idx)=>{
+      const isP = S.preview.itemId === browsing && S.preview.slideIndex === idx;
+      const isL = S.live.itemId === browsing && S.live.slideIndex === idx && !S.live.blank;
+      const row = h('div', 'slide' + (isL ? ' live' : isP ? ' prev' : ''));
+      const body = h('div', 'body');
+      const no = h('div', 'no', 'Slide ' + (idx + 1));
+      if(isP) no.appendChild(h('b', 'p', 'PREVIEW')); if(isL) no.appendChild(h('b', 'l', 'LIVE'));
+      body.appendChild(no); body.appendChild(h('div', 'tx', sl.text || '(empty)'));
+      body.addEventListener('click', ()=>send('stage', { itemId:browsing, slideIndex:idx }));
+      const go = h('button', 'go', 'Go live ▸'); go.addEventListener('click', ()=>send('stageLive', { itemId:browsing, slideIndex:idx }));
+      row.appendChild(body); row.appendChild(go); main.appendChild(row);
+    });
+    main.appendChild(h('div', 'empty', 'Tap a slide to stage it in Preview. “Go live” sends it straight to the screen.'));
+  }
+
+  function renderWorkspace(main){
+    const w = S.workspace;
+    if(!w || !w.names || !w.names.length){ main.appendChild(h('div', 'empty', 'No saved workspace layouts yet. Save one on the computer first.')); return; }
+    main.appendChild(h('div', 'empty', 'Switch the layout shown on the computer:'));
+    w.names.forEach(n=>{
+      const b = h('button', 'ws' + (n === w.active ? ' act' : ''));
+      b.appendChild(h('span', null, n)); b.appendChild(h('span', null, n === w.active ? '● active' : ''));
+      b.addEventListener('click', ()=>send('workspace', { name:n }));
+      main.appendChild(b);
+    });
+  }
+
+  // ---------- start ----------
+  (function init(){
+    const q = new URLSearchParams(location.search);
+    const isHttp = /^https?:$/.test(location.protocol);
+    const saved = (()=>{ try{ return JSON.parse(LS('pr_conn') || 'null'); }catch(e){ return null; } })();
+    const qPin = q.get('pin');
+    if(qPin){ pin = qPin; try{ history.replaceState(null, '', location.pathname); }catch(e){} }   // keep the PIN out of the address bar
+    else if(saved && saved.pin){ pin = saved.pin; }
+    if(saved && saved.host) $('hostIn').value = saved.host.replace(/^http:\/\//, '');
+    if(pin) $('pinIn').value = pin;
+    render();
+    if(!pin){ showConnect(''); return; }
+    // QR link: this page's own address first, then the other addresses the QR code listed.
+    const hostParam = normHost(q.get('host') || '');
+    const inApp = location.hostname === 'localhost' && !location.port;   // the copy packaged inside the Android app
+    const port = hostParam ? new URL(hostParam).port : (location.port || '8787');
+    const alts = (q.get('alt') || '').split(',').filter(Boolean).map(a=>normHost(a.includes(':') ? a : a + ':' + port));
+    const first = hostParam ? [hostParam] : (isHttp && !inApp ? [location.origin] : []);
+    if(saved && saved.host) first.push(saved.host);
+    startConnect(first.concat(alts));
+  })();
+})();
+</script>
+</body>
+</html>
